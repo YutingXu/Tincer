@@ -1,6 +1,6 @@
-# tinc for Android — interface redesign
+# Tincer for Android
 
-A native Jetpack Compose client for our private tinc mesh, based on tincapp 0.45.
+Tincer is a native Jetpack Compose client for our private tinc mesh, based on tincapp 0.45.
 The Android application ID is `dev.yuting.tinc`; it installs alongside the
 original app. Android 8.0 or later and a 64-bit ARM or x86 device are required.
 

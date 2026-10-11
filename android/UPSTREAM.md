@@ -1,6 +1,6 @@
 # Upstream sources
 
-This Android client is a local fork of [tincapp](https://github.com/pacien/tincapp)
+Tincer is a private fork of [tincapp](https://github.com/pacien/tincapp)
 at `e38cbfbb59deeebe93043af0b9ebf21ebb825e6a` (version 0.45).
 Its GPL-3.0-or-later license, contributor list, and copyright notices are retained.
 The old activities and XML screen layouts have been replaced with Jetpack Compose.

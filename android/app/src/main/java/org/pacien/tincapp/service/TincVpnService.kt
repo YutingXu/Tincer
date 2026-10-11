@@ -221,7 +221,7 @@ class TincVpnService : VpnService() {
     val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     val disconnect = PendingIntent.getService(this, 1, Intent(this, TincVpnService::class.java).setAction(Actions.ACTION_DISCONNECT), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     startForeground(1, NotificationCompat.Builder(this, "vpn")
-      .setSmallIcon(R.drawable.ic_stat_mesh).setContentTitle("tinc · $netName")
+      .setSmallIcon(R.drawable.ic_stat_mesh).setContentTitle("${getString(R.string.app_name)} · $netName")
       .setContentText("VPN service is running").setContentIntent(open).setOngoing(true)
       .addAction(0, "Disconnect", disconnect).build())
   }

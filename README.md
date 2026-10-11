@@ -1,7 +1,16 @@
-# Private tinc container
+# Tincer
 
-The native Android redesign is in [android/](android/README.md). It uses the same
-unmodified upstream tinc revision as this container and the Mac trial.
+Tincer is a native, rootless Android client for tinc, with a Jetpack Compose
+interface and an unmodified upstream tinc engine.
+
+- [Android app and build instructions](android/README.md)
+- [Upstream sources and attribution](android/UPSTREAM.md)
+- [Mac, Linux, and Android trial results](TRIAL.md)
+
+This repository also includes a source-built Linux container for the same mesh.
+The Android app, container, and Mac trial use the same upstream tinc revision.
+
+## tinc container
 
 A small, source-built tinc image for a private mesh. Peers use direct UDP when
 available and fall back to carrying VPN packets over TCP connections when UDP is

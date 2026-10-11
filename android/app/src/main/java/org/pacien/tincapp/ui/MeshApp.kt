@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -41,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.pacien.tincapp.BuildConfig
+import org.pacien.tincapp.R
 import org.pacien.tincapp.utils.TincKeyring
 
 internal enum class Page(val title: String, val icon: ImageVector) {
@@ -78,7 +80,7 @@ fun MeshApp(model: MeshViewModel, onConnect: (String?) -> Unit, onShare: (String
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
           Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().statusBarsPadding().padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             MeshMark(Modifier.size(29.dp), MaterialTheme.colorScheme.primary)
-            Text("tinc", Modifier.padding(start = 10.dp), fontSize = 25.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp)
+            Text(stringResource(R.string.app_name), Modifier.padding(start = 10.dp), fontSize = 25.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1).sp)
             Spacer(Modifier.weight(1f))
             if (state.phase == ConnectionPhase.Active) {
               Box(Modifier.size(7.dp).background(Color(0xFF269977), CircleShape))
@@ -372,7 +374,7 @@ private fun SettingsScreen(state: MeshState, open: (Sheet) -> Unit, notification
     }
     item {
       Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("tinc · ${BuildConfig.VERSION_NAME}", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+        Text("${stringResource(R.string.app_name)} · ${BuildConfig.VERSION_NAME}", fontWeight = FontWeight.Medium, fontSize = 13.sp)
         Text("Upstream tinc 1.1 · 211e3df\nRootless Android client · GPL-3.0-or-later", fontSize = 12.sp, lineHeight = 19.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
       }
     }
