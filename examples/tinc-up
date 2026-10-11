@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+: "${VPN_ADDRESS:?Set VPN_ADDRESS to the local VPN address and prefix}"
+ip address replace "$VPN_ADDRESS" dev "$INTERFACE"
+ip link set "$INTERFACE" up

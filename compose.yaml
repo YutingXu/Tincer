@@ -1,0 +1,18 @@
+services:
+  tinc:
+    build: .
+    image: tinc-private:local
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - ./config:/etc/tinc
+    environment:
+      VPN_ADDRESS: ${VPN_ADDRESS:-10.77.0.1/24}
+    command:
+      - --no-detach
+      - --debug=1
+      - --net=${TINC_NETWORK:-mesh}
