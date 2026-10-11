@@ -17,6 +17,7 @@ import androidx.activity.viewModels
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import org.pacien.tincapp.intent.Actions
+import org.pacien.tincapp.service.TincVpnService
 
 class MainActivity : ComponentActivity() {
   private val model: MeshViewModel by viewModels()
@@ -44,6 +45,11 @@ class MainActivity : ComponentActivity() {
     }
     if (savedInstanceState == null && intent.action == Actions.ACTION_CONNECT)
       intent.data?.schemeSpecificPart?.let { model.select(it); connect(intent.data?.fragment) }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    TincVpnService.refreshNotification()
   }
 
   private fun connect(passphrase: String?) {

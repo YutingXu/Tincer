@@ -73,6 +73,8 @@ class TincVpnService : VpnService() {
         startVpn(intent.data!!.schemeSpecificPart, intent.data!!.fragment)
       intent?.action == Actions.ACTION_DISCONNECT ->
         stopVpn()
+      intent?.action == ACTION_REFRESH_NOTIFICATION ->
+        getCurrentNetName()?.let(::showForeground)
       intent == null || intent.action == Actions.ACTION_SYSTEM_CONNECT ->
         restorePreviousConnection()
       else ->
@@ -296,6 +298,7 @@ class TincVpnService : VpnService() {
   companion object {
     private const val SETUP_DELAY = 500L // ms
     private const val DEVICE_FD_ABSTRACT_SOCKET = "${BuildConfig.APPLICATION_ID}.daemon.socket"
+    private const val ACTION_REFRESH_NOTIFICATION = "${BuildConfig.APPLICATION_ID}.refreshNotification"
 
     private val STORE_NAME = this::class.java.`package`!!.name
     private const val STORE_KEY_NETNAME = "netname"
@@ -341,6 +344,11 @@ class TincVpnService : VpnService() {
       App.getContext().startService(
         Intent(App.getContext(), TincVpnService::class.java)
           .setAction(Actions.ACTION_DISCONNECT))
+    }
+
+    fun refreshNotification() {
+      if (isConnected()) App.getContext().startService(
+        Intent(App.getContext(), TincVpnService::class.java).setAction(ACTION_REFRESH_NOTIFICATION))
     }
   }
 }
