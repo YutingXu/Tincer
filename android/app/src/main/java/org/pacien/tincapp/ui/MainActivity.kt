@@ -2,9 +2,13 @@
 package org.pacien.tincapp.ui
 
 import android.app.Activity
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,9 +20,10 @@ import org.pacien.tincapp.intent.Actions
 
 class MainActivity : ComponentActivity() {
   private val model: MeshViewModel by viewModels()
+  private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
   private val permission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-    if (result.resultCode == Activity.RESULT_OK) model.connect(model.pendingPassphrase)
+    if (result.resultCode == Activity.RESULT_OK) startConnection(model.pendingPassphrase)
     else model.permissionDenied()
     model.pendingPassphrase = null
   }
@@ -31,6 +36,7 @@ class MainActivity : ComponentActivity() {
     enableEdgeToEdge()
     setContent {
       MeshApp(model, onConnect = ::connect, onShare = ::share,
+        onNotifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
         onScan = {
           scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
             .setPrompt("Scan a tinc invitation").setBeepEnabled(false).setOrientationLocked(false))
@@ -42,10 +48,20 @@ class MainActivity : ComponentActivity() {
 
   private fun connect(passphrase: String?) {
     val request = VpnService.prepare(this)
-    if (request == null) model.connect(passphrase)
+    if (request == null) startConnection(passphrase)
     else {
       model.pendingPassphrase = passphrase
       permission.launch(request)
+    }
+  }
+
+  private fun startConnection(passphrase: String?) {
+    model.connect(passphrase)
+    val permissions = getSharedPreferences("permissions", MODE_PRIVATE)
+    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+      !permissions.getBoolean("notificationsAsked", false)) {
+      permissions.edit().putBoolean("notificationsAsked", true).apply()
+      notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
   }
 

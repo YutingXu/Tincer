@@ -18,6 +18,9 @@ original app. Android 8.0 or later and a 64-bit ARM or x86 device are required.
 The UI uses real configuration and daemon state. There are no simulated peers or
 connection controls. Fresh installations begin with an empty network list.
 The VPN service has a foreground notification and disconnect action.
+Android 13 and later asks for notification permission after the first VPN
+connection. Declining it keeps the VPN usable; Settings includes a link to
+Android's notification controls.
 
 ## Native engine
 
@@ -61,7 +64,8 @@ local build.
 Use a dedicated Android emulator with no saved networks in this app. The test
 journey creates `home`, generates real Ed25519 keys, edits DNS, checks appearance
 persistence, declines and then grants Android VPN permission, starts the native
-VPN without root, rotates/recreates the activity, backgrounds the app, and
+VPN without root, declines optional notification permission, rotates/recreates
+the activity, backgrounds the app, and
 finally disconnects. Unit tests check actual daemon status parsing and repeated
 configuration saves preserving DNS/routes/app bypass.
 

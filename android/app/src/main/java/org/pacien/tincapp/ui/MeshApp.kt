@@ -51,7 +51,7 @@ internal enum class Sheet { None, AddNetwork, Join, Create, Peer, NetworkSetting
 private val SignalGreen = Color(0xFF54D7AA)
 
 @Composable
-fun MeshApp(model: MeshViewModel, onConnect: (String?) -> Unit, onShare: (String) -> Unit, onScan: () -> Unit) {
+fun MeshApp(model: MeshViewModel, onConnect: (String?) -> Unit, onShare: (String) -> Unit, onScan: () -> Unit, onNotifications: () -> Unit) {
   val state by model.state.collectAsStateWithLifecycle()
   var page by model.page
   var sheet by model.sheet
@@ -104,7 +104,7 @@ fun MeshApp(model: MeshViewModel, onConnect: (String?) -> Unit, onShare: (String
           Page.Devices -> DevicesScreen(state, { sheet = Sheet.Peer }, { selectedPeer = it })
           Page.Networks -> NetworksScreen(state, { model.select(it); page = Page.Home }, { sheet = Sheet.AddNetwork },
             { sheet = Sheet.NetworkSettings }, { model.exportPublic(onShare) })
-          Page.Settings -> SettingsScreen(state, { sheet = it })
+          Page.Settings -> SettingsScreen(state, { sheet = it }, onNotifications)
         }
       }
     }
@@ -339,7 +339,7 @@ private fun NetworksScreen(state: MeshState, select: (String) -> Unit, add: () -
 }
 
 @Composable
-private fun SettingsScreen(state: MeshState, open: (Sheet) -> Unit) {
+private fun SettingsScreen(state: MeshState, open: (Sheet) -> Unit, notifications: () -> Unit) {
   LazyColumn(Modifier.widthIn(max = 640.dp).fillMaxSize(), contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
     item { ScreenTitle("Settings", "Network and app preferences.") }
     state.profile?.let { profile -> item {
@@ -357,7 +357,11 @@ private fun SettingsScreen(state: MeshState, open: (Sheet) -> Unit) {
     item {
       Eyebrow("PREFERENCES")
       Surface(Modifier.padding(top = 10.dp), shape = RoundedCornerShape(20.dp)) {
-        ActionRow(Icons.Outlined.Palette, "Appearance", if (state.appearance == Appearance.System) "Follow system" else state.appearance.name, { open(Sheet.Appearance) })
+        Column {
+          ActionRow(Icons.Outlined.Palette, "Appearance", if (state.appearance == Appearance.System) "Follow system" else state.appearance.name, { open(Sheet.Appearance) })
+          HorizontalDivider(Modifier.padding(horizontal = 18.dp))
+          ActionRow(Icons.Outlined.Notifications, "Connection notifications", "VPN status and disconnect control", notifications)
+        }
       }
     }
     item {
