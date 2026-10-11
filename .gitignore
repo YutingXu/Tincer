@@ -1,4 +1,5 @@
 /config/
+/runtime/
 .env
 *.priv
 /*.public
