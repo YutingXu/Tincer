@@ -1,5 +1,8 @@
 # Private tinc container
 
+The native Android redesign is in [android/](android/README.md). It uses the same
+unmodified upstream tinc revision as this container and the Mac trial.
+
 A small, source-built tinc image for a private mesh. Peers use direct UDP when
 available and fall back to carrying VPN packets over TCP connections when UDP is
 blocked. Peers can also forward traffic for one another without depending on
