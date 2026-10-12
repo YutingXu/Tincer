@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         onNotifications = { startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)) },
         onScan = {
           scanner.launch(ScanOptions().setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            .setPrompt("Scan a tinc invitation").setBeepEnabled(false).setOrientationLocked(false))
+            .setPrompt("Scan an invitation").setBeepEnabled(false).setOrientationLocked(false))
         })
     }
     if (savedInstanceState == null && intent.action == Actions.ACTION_CONNECT)
@@ -73,6 +73,6 @@ class MainActivity : ComponentActivity() {
 
   private fun share(text: String) {
     startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
-      .setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share public peer configuration"))
+      .setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share public key"))
   }
 }

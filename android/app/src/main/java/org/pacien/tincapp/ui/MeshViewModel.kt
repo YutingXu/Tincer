@@ -32,6 +32,7 @@ import java.net.InetAddress
 class MeshViewModel(application: Application) : AndroidViewModel(application) {
   internal val page = mutableStateOf(Page.Home)
   internal val sheet = mutableStateOf(Sheet.None)
+  internal val peer = mutableStateOf<String?>(null)
   private val preferences = application.getSharedPreferences("mesh_ui", Context.MODE_PRIVATE)
   private val mutableState = MutableStateFlow(MeshState(
     selectedName = preferences.getString("network", null),
@@ -127,7 +128,7 @@ class MeshViewModel(application: Application) : AndroidViewModel(application) {
     TincVpnService.disconnect()
   }
 
-  fun permissionDenied() { mutableState.update { it.copy(error = "VPN permission was declined. You can try connecting again.", phase = ConnectionPhase.Offline) } }
+  fun permissionDenied() { mutableState.update { it.copy(error = "Tincer needs VPN permission to connect.", phase = ConnectionPhase.Offline) } }
   fun dismissError() { App.notificationManager.dismissAll(); mutableState.update { it.copy(error = null) } }
   fun dismissNotice() { mutableState.update { it.copy(notice = null) } }
   fun scanned(invitation: String?) { mutableState.update { it.copy(scannedInvitation = invitation?.removePrefix("tinc:")) } }
@@ -151,7 +152,7 @@ class MeshViewModel(application: Application) : AndroidViewModel(application) {
   fun join(name: String, invitation: String, done: () -> Unit) = action(done) {
     require(name.matches(Regex("[A-Za-z0-9_-]+"))) { "Enter a network name using letters, numbers, underscores or hyphens." }
     require(!AppPaths.confDir(name).exists()) { "A network named $name already exists." }
-    require(invitation.isNotBlank()) { "Paste or scan a tinc invitation." }
+    require(invitation.isNotBlank()) { "Paste or scan an invitation." }
     Tinc.join(name, invitation.trim()).await()
     TincApp.generateIfaceCfg(name).await()
     TincApp.removeScripts(name).await()
@@ -164,8 +165,8 @@ class MeshViewModel(application: Application) : AndroidViewModel(application) {
   fun addPeer(publicConfiguration: String, endpoint: String, done: () -> Unit) = action(done) {
     val profile = state.value.profile ?: error("Choose a network first.")
     val name = publicConfiguration.lineSequence().firstOrNull { it.trim().startsWith("Name =") }
-      ?.substringAfter('=' )?.trim() ?: error("Paste a public peer export from tinc export.")
-    require(name != profile.nodeName) { "This is your own device. Add another device's public configuration." }
+      ?.substringAfter('=' )?.trim() ?: error("Paste the other node's public key, from tinc export.")
+    require(name != profile.nodeName) { "That is this device's own key. Paste the other node's key." }
     Tinc.importPeer(profile.name, publicConfiguration.trim()).await()
     if (endpoint.isNotBlank()) Tinc.set(profile.name, "$name.Address", endpoint.trim()).await()
     Tinc.add(profile.name, "ConnectTo", name).await()
@@ -181,7 +182,7 @@ class MeshViewModel(application: Application) : AndroidViewModel(application) {
     profile.configuration.copy(addresses = ips, routes = parseCidrs(routes), dnsServers = servers,
       allowedApplications = emptyList(), disallowedApplications = bypassApps).write(AppPaths.netConfFile(profile.name))
     saveSubnets(profile.name, ips)
-    mutableState.update { it.copy(notice = if (TincVpnService.isConnected()) "Saved. Reconnect to apply network settings." else "Network settings saved.") }
+    mutableState.update { it.copy(notice = if (TincVpnService.isConnected()) "Saved. Reconnect to apply." else "Saved.") }
   }
 
   fun exportPublic(done: (String) -> Unit) = action {
@@ -192,7 +193,7 @@ class MeshViewModel(application: Application) : AndroidViewModel(application) {
 
   suspend fun log(): String = withContext(Dispatchers.IO) {
     state.value.selectedName?.let { AppPaths.logFile(it) }?.takeIf { it.exists() }
-      ?.readLines()?.takeLast(150)?.joinToString("\n") ?: "No connection logs yet. Connect to a network to start logging."
+      ?.readLines()?.takeLast(150)?.joinToString("\n") ?: "No log yet. Connect to start one."
   }
 
   private suspend fun saveSubnets(network: String, addresses: List<CidrAddress>) {

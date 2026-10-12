@@ -23,11 +23,20 @@ ExternalProject_Add(tinc
     -Dcrypto=nolegacy -Ddocs=disabled -Dtests=disabled -Dsystemd=disabled
     -Dcurses=disabled -Dreadline=disabled -Dlzo=disabled -Dlz4=disabled -Dzlib=disabled
   BUILD_COMMAND ${MESON} compile -C <BINARY_DIR>
-  INSTALL_COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E copy <BINARY_DIR>/src/tinc ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libtinc.so
-    COMMAND ${CMAKE_COMMAND} -E copy <BINARY_DIR>/src/tincd ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libtincd.so
+  INSTALL_COMMAND ""
 )
 
-# AGP collects the packaged executables alongside this native library.
+# AGP can clear its output directory while retaining ExternalProject's install
+# stamp. Stage the executables on every native build, even when Meson is cached.
+ExternalProject_Get_Property(tinc BINARY_DIR)
+add_custom_target(package_tinc
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${BINARY_DIR}/src/tinc ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libtinc.so
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${BINARY_DIR}/src/tincd ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libtincd.so
+  BYPRODUCTS ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libtinc.so ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libtincd.so
+)
+add_dependencies(package_tinc tinc)
+
+# AGP collects the staged executables alongside this native library.
 add_library(main SHARED src/main/c/main.c)
-add_dependencies(main tinc)
+add_dependencies(main package_tinc)

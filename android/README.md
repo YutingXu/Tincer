@@ -6,14 +6,23 @@ original app. Android 8.0 or later and a 64-bit ARM or x86 device are required.
 
 ## Interface
 
-- **Home:** network selection, connect/disconnect, VPN address, and actual peer status.
+Material 3, with wallpaper colours on Android 12 and later and Tincer's indigo before that.
+
+- **Home:** the selected network's state, this device's VPN address, a connect toggle,
+  and every peer with live UDP/TCP/forwarded reachability and round-trip latency.
   An active VPN with no reachable peers is shown as waiting, rather than connected.
-- **Devices:** search, local device identity, live UDP/TCP/forwarded reachability,
-  round-trip latency, and daemon details.
-- **Networks:** create a network with local key generation, join by invitation or
-  QR code, add a public peer configuration, and share this device's public export.
-- **Settings:** VPN addresses, routes, DNS, app bypass, light/dark/system appearance,
-  and connection logs. Interface changes apply after reconnecting.
+  Tap the network name to switch networks, join by invitation or QR code, or create one
+  with local key generation. Adding a peer imports its public export and offers this
+  device's export to share back. Tap a peer for its endpoint, traffic and daemon details.
+- **Settings:** VPN addresses, routes, DNS, excluded apps, public key sharing,
+  light/dark/system appearance, notifications, and the connection log.
+  Interface changes apply after reconnecting.
+
+The theme is Material 3 Expressive (`MaterialExpressiveTheme` with the expressive motion
+scheme), which needs material3 `1.5.0-beta01`, pinned in `app/build.gradle` ahead of the
+Compose BOM. The connect toggle morphs from a circle into a scalloped shape, a peer row
+expands into its page, settings slides in on a shared axis, and both pages follow
+Android's predictive back gesture.
 
 The UI uses real configuration and daemon state. There are no simulated peers or
 connection controls. Fresh installations begin with an empty network list.
@@ -59,22 +68,33 @@ The debug APK is signed using the local Android debug key. A production release
 needs our release signing key. No publishing or registry upload is part of this
 local build.
 
+The native tools are staged on every CMake build, including when the upstream
+build is cached. To verify that both tools remain in the APK for both ABIs after
+a Gradle clean that retains the native cache, run from this directory:
+
+```sh
+python3 ../tests/android_packaging.py
+```
+
 ## Verify
 
 Use a dedicated Android emulator with no saved networks in this app. The test
-journey creates `home`, generates real Ed25519 keys, edits DNS, checks appearance
+journey creates `home`, generates real Ed25519 keys, edits DNS, preserves pending
+app exclusions and their search across activity recreation, checks appearance
 persistence, declines and then grants Android VPN permission, starts the native
 VPN without root, declines optional notification permission, rotates/recreates
-the activity, backgrounds the app, and
-finally disconnects. Unit tests check actual daemon status parsing and repeated
-configuration saves preserving DNS/routes/app bypass.
+the activity, backgrounds the app, and finally disconnects. Peer-search UI
+regressions check that switching networks clears the query and that an active
+search remains available to clear after disconnecting. Unit tests
+check actual daemon status parsing and repeated configuration saves preserving
+DNS/routes/app bypass.
 
 ```sh
 ANDROID_SERIAL=DEVICE_SERIAL ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest
 ```
 
 The emulator must expose its native VPN permission dialog; the test interacts
-with Android's normal grant/decline buttons. Real-phone battery/OEM behavior and
+with Android's normal grant/decline buttons. Long-running battery behavior and
 camera scanning still require device testing. Connection validation is recorded in [../TRIAL.md](../TRIAL.md).
 
 Source is GPL-3.0-or-later; the upstream license and copyright notices are retained.
