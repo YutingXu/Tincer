@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the production image using isolated Docker peers and fresh keys."""
 
+import json
 import subprocess
 import sys
 import time
@@ -79,36 +80,45 @@ def main():
             "build", "--tag", firewall_image, "--build-arg", f"TINC_IMAGE={image}",
             "-", stdin=(
                 "ARG TINC_IMAGE\nFROM ${TINC_IMAGE}\n"
-                "RUN apk add --no-cache iptables\n"
+                "RUN apk add --no-cache iptables zbar imagemagick\n"
             ), timeout=300,
         )
         docker("network", "create", prefix)
 
-        hook = (ROOT / "examples" / "tinc-up").read_text()
-        exports = {}
-        for node, other in (("alpha", "beta"), ("beta", "alpha")):
+        for node in nodes:
             docker("volume", "create", volumes[node])
-            script = f"""set -eu
-tinc -b -n mesh init {node}
-tinc -b -n mesh set DeviceType tun
-tinc -b -n mesh set Interface tinc0
-tinc -b -n mesh set {node}.Address {node}
-tinc -b -n mesh set {node}.Subnet {addresses[node]}/32
-tinc -b -n mesh set ConnectTo {other}
-tinc -b -n mesh set UDPDiscoveryTimeout 5
-tinc -b -n mesh set UDPDiscoveryKeepaliveInterval 1
-cat > /etc/tinc/mesh/tinc-up <<'TINC_UP'
-{hook}TINC_UP
-chmod 755 /etc/tinc/mesh/tinc-up
-"""
-            docker(
-                "run", "--rm", "-i", "--network", "none", "--mount", mount(node),
-                "--entrypoint", "sh", image, "-s", stdin=script,
-            )
-            exports[node] = admin(node, "export")
 
-        for node, other in (("alpha", "beta"), ("beta", "alpha")):
-            admin(node, "import", stdin=exports[other] + "\n")
+        def prepare(*args):
+            return docker(
+                "run", "--rm", "--network", "none", "--mount", mount("alpha"),
+                "--entrypoint", "tincer-setup", image, "prepare", *args,
+            )
+
+        prepare("--address", "alpha", "--name", "alpha")
+        identity = admin("alpha", "export")
+        prepare("--address", "alpha", "--name", "alpha")
+        if admin("alpha", "export") != identity:
+            raise RuntimeError("Rerunning setup replaced the node's identity")
+        print("PASS: first setup generates keys; rerunning preserves identity", flush=True)
+
+        admin("alpha", "-n", "manual", "init", "existing_node")
+        manual_identity = admin("alpha", "-n", "manual", "export")
+        try:
+            docker(
+                "run", "--rm", "--network", "none", "--mount", mount("alpha"),
+                "--env", "TINC_NETWORK=manual", "--entrypoint", "tincer-setup", image,
+                "prepare", "--address", "alpha",
+            )
+        except RuntimeError as error:
+            if "existing manual tinc configuration" not in str(error):
+                raise
+        else:
+            raise RuntimeError("Setup overwrote an existing manual configuration")
+        if admin("alpha", "-n", "manual", "export") != manual_identity:
+            raise RuntimeError("Setup changed the existing manual identity")
+        print("PASS: existing manual configurations remain intact", flush=True)
+
+        def start(node):
             docker(
                 "run", "--detach", "--name", containers[node], "--network", prefix,
                 "--network-alias", node, "--cap-add", "NET_ADMIN",
@@ -116,9 +126,65 @@ chmod 755 /etc/tinc/mesh/tinc-up
                 "--env", f"VPN_ADDRESS={addresses[node]}/24", image,
             )
 
+        start("alpha")
+
+        def pair(peer):
+            docker("exec", containers["alpha"], "tincer-setup", "invite", "--invite", peer)
+            settings = json.loads(docker("exec", containers["alpha"], "cat", "/etc/tinc/mesh/tincer.json"))
+            return settings["peers"][peer]
+
+        beta = pair("beta")
+        invitation = docker(
+            "exec", containers["alpha"], "cat", f"/etc/tinc/mesh/invitations/{beta['file']}",
+        )
+        for line in ("Name = beta", "Subnet = 10.77.0.2/32", "Ifconfig = 10.77.0.2/32", "Route = 10.77.0.0/24"):
+            if line not in invitation.splitlines():
+                raise RuntimeError(f"Invitation is missing {line}")
+        if pair("beta") != beta:
+            raise RuntimeError("Rerunning pairing did not reuse the outstanding invitation")
+        gamma = pair("gamma")
+        if gamma["address"] != "10.77.0.3":
+            raise RuntimeError("Unused invitations did not reserve separate phone addresses")
+
+        # Renew a real expired native invitation, preserving the phone's address.
+        docker(
+            "exec", containers["alpha"], "python3", "-c",
+            "import os,sys; os.utime(sys.argv[1], (0, 0))",
+            f"/etc/tinc/mesh/invitations/{beta['file']}",
+        )
+        renewed = pair("beta")
+        if renewed["address"] != beta["address"] or renewed["url"] == beta["url"]:
+            raise RuntimeError("Expired invitation was not renewed with its reserved address")
+        beta = renewed
+        decoded = docker(
+            "run", "--rm", "--network", "none", "--mount", mount("alpha") + ",readonly",
+            "--entrypoint", "zbarimg", firewall_image, "--quiet", "--raw",
+            "/etc/tinc/mesh/pairing/beta.png",
+        )
+        if decoded != beta["url"]:
+            raise RuntimeError("QR image did not decode to the invitation URL")
+        print("PASS: addressed invitations, QR decoding, pending reservations and expiration renewal", flush=True)
+
+        docker(
+            "run", "--rm", "--network", prefix, "--mount", mount("beta"),
+            "--entrypoint", "tinc", image, "-b", "--force", "-n", "mesh", "join", beta["url"],
+        )
+        joined = admin("beta", "export")
+        if any(value not in joined for value in ("Subnet = 10.77.0.2/32", "Ed25519PublicKey")):
+            raise RuntimeError("Invitation join did not produce an addressed peer identity")
+        delta = pair("delta")
+        if delta["address"] != "10.77.0.4":
+            raise RuntimeError("Joined phones lost their reserved address")
+
+        # Keep transport discovery short in this isolated test only.
+        for node in nodes:
+            admin(node, "set", "UDPDiscoveryTimeout", "5")
+            admin(node, "set", "UDPDiscoveryKeepaliveInterval", "1")
+        start("beta")
+        exports = {}
         wait_for_peer("direct UDP", lambda status: "directly with UDP" in status)
         ping_both_ways()
-        print("PASS: authenticated peers pass traffic over direct UDP", flush=True)
+        print("PASS: invitation-paired peers configure their interfaces and pass direct UDP traffic", flush=True)
 
         for node in nodes:
             firewall(node, "-I", "INPUT", "-p", "udp", "--dport", "655", "-j", "DROP")

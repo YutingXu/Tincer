@@ -31,6 +31,12 @@ Android 13 and later asks for notification permission after the first VPN
 connection. Declining it keeps the VPN usable; Settings includes a link to
 Android's notification controls.
 
+The Docker [one-command setup](../README.md#one-command-linux-setup-and-phone-pairing)
+prints an invitation and QR code with the phone's VPN address and route.
+Joining selects an ephemeral listening port, since Android cannot bind tinc's
+privileged default port 655. tinc filters port settings out of invitations, so
+the app sets its own port after the native join completes.
+
 ## Native engine
 
 The build downloads unmodified upstream tinc at the same revision as our desktop
@@ -96,6 +102,20 @@ ANDROID_SERIAL=DEVICE_SERIAL ./gradlew :app:assembleDebug :app:testDebugUnitTest
 The emulator must expose its native VPN permission dialog; the test interacts
 with Android's normal grant/decline buttons. Long-running battery behavior and
 camera scanning still require device testing. Connection validation is recorded in [../TRIAL.md](../TRIAL.md).
+
+To test real invitation enrollment and VPN traffic, install the current debug
+APK on a fresh dedicated emulator or test phone, generate an unused invitation
+with the Docker setup, and save the URL in a private file:
+
+```sh
+ANDROID_SERIAL=DEVICE_SERIAL python3 ../tests/android_invitation.py \
+  --invitation-file /path/to/invitation.txt --peer 10.77.0.1
+```
+
+The test uses the normal Join and Connect screens, accepts VPN consent if
+needed, declines optional notifications, and requires five 1,300-byte pings
+to the Docker node with no loss after transport discovery. It leaves the test
+profile connected for inspection and does not erase existing app data.
 
 Source is GPL-3.0-or-later; the upstream license and copyright notices are retained.
 Native tinc's GPL license is also bundled in the APK.

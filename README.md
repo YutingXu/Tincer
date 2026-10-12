@@ -24,9 +24,59 @@ still reports 1.1pre18; the image's revision label identifies the actual source.
 The 1.1 branch also supplies the control and invitation tools used by mobile
 clients. It is upstream prerelease software.
 
-Only the compiled daemon, control utility, runtime libraries, interface tools,
-and license notices enter the final image. Configuration and keys live in
-`./config`, mounted at `/etc/tinc`, and are excluded from the build context.
+The final image contains the compiled daemon, control utility, runtime libraries,
+interface tools, Python setup helper, QR encoder, and license notices.
+Configuration and keys live in `./config`, mounted at `/etc/tinc`, and are
+excluded from the build context.
+
+## One-command Linux setup and phone pairing
+
+With Docker Engine and Docker Compose installed, run this from the repository
+on your Linux host:
+
+```sh
+./setup.sh --address 192.168.1.10 --name home --invite my_phone
+```
+
+Replace `192.168.1.10` with the Linux host's address reachable from the phone.
+For use away from your LAN, use a public hostname/IP and forward the selected
+TCP and UDP port to this host. The default is 655; `--port 443` selects another
+free port. The setup does not configure the router or host firewall.
+
+The command builds the image, generates the Docker node's keys once, assigns it
+`10.77.0.1`, starts the VPN, and prints a single-use invitation and terminal QR
+code. It also saves a shareable QR image at `pairing/qr.png`. In Tincer, choose
+**Join network**, enter a local profile name, and scan the QR code or paste the
+invitation. The phone generates its own private key and receives its VPN address
+and route automatically. Tincer selects an automatically assigned listening
+port (`Port = 0`) after joining, since rootless Android cannot bind the default
+port 655. No OpenSSL commands or public-key file exchange are needed. Accept Android's
+VPN permission when connecting.
+
+Use `--subnet 10.78.0.0/24` on the first run if the default VPN subnet overlaps
+another network. The Docker node uses the first usable address; phone addresses
+are reserved separately for each device name, including unused invitations.
+Only traffic to this VPN subnet is routed through tinc.
+
+To add another phone:
+
+```sh
+./setup.sh --invite second_phone
+```
+
+Rerunning the setup preserves keys and settings, and redisplays an outstanding
+invitation for the same phone. Invitations expire after seven days; rerunning
+renews an expired invitation while keeping that phone's reserved address. Once
+a phone has joined, choose a new `--invite` name for another device. Keep the
+invitation and QR private until used. `pairing/` is excluded from Git and image
+builds, and its files are readable only by the user running the setup.
+
+The saved setup settings and address reservations are in
+`config/mesh/tincer.json`; back up the whole `config` directory to retain the
+node's identity. Existing manually configured profiles are left intact: use a
+separate checkout/config directory for this setup. The deployment uses native
+Linux host networking, `/dev/net/tun`, and `NET_ADMIN`; it does not create a VPN
+interface on a macOS host through Docker Desktop.
 
 ## Build
 
@@ -181,11 +231,15 @@ docker build -t tinc-private:local .
 python3 tests/integration.py tinc-private:local
 ```
 
-The test creates two isolated peers with fresh keys and checks direct UDP traffic,
-automatic TCP fallback after firewall rules block UDP, explicit TCP-only traffic,
-identity persistence on restart, and clean SIGTERM shutdown. A disposable helper
-image supplies `iptables`; the production image is exercised unchanged. Containers,
-volumes, the Docker network, and the helper image are removed afterwards.
+The test initializes a Docker node through the setup helper and joins a second
+peer using its invitation. It checks key persistence, preservation of existing
+manual configurations, automatic address/route provisioning, pending address
+reservations, expired invitation renewal, and decoding the generated QR image.
+It then checks direct UDP traffic, automatic TCP fallback after firewall rules
+block UDP, explicit TCP-only traffic, identity persistence on restart, and clean
+SIGTERM shutdown. A disposable helper image supplies `iptables` and the QR
+decoder; the production image is exercised unchanged. Containers, volumes, the
+Docker network, and the helper image are removed afterwards.
 
 This test works in Docker Desktop's Linux VM, including on macOS. The deployment
 Compose file is for native Linux: running a Linux container on macOS does not

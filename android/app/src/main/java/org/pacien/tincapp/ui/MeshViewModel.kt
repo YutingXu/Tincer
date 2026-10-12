@@ -154,6 +154,7 @@ class MeshViewModel(application: Application) : AndroidViewModel(application) {
     require(!AppPaths.confDir(name).exists()) { "A network named $name already exists." }
     require(invitation.isNotBlank()) { "Paste or scan an invitation." }
     Tinc.join(name, invitation.trim()).await()
+    Tinc.set(name, "Port", "0").await() // Rootless Android cannot listen on tinc's default port 655.
     TincApp.generateIfaceCfg(name).await()
     TincApp.removeScripts(name).await()
     if (!TincVpnService.isConnected()) {

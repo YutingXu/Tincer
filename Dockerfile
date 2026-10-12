@@ -35,11 +35,13 @@ LABEL org.opencontainers.image.title="Private tinc VPN" \
 
 RUN apk upgrade --no-cache \
     && apk add --no-cache iproute2-minimal libcrypto3 libssl3 lz4-libs lzo zlib \
+       python3 libqrencode-tools \
     && mkdir -p /etc/tinc /usr/share/licenses/tinc
 
 COPY --from=build /out/usr/sbin/tinc /usr/sbin/tinc
 COPY --from=build /out/usr/sbin/tincd /usr/sbin/tincd
 COPY --from=build /src/COPYING /src/COPYING.README /usr/share/licenses/tinc/
+COPY --chmod=755 container/setup.py /usr/local/bin/tincer-setup
 
 EXPOSE 655/tcp 655/udp
 VOLUME ["/etc/tinc"]

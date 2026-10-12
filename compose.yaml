@@ -12,6 +12,7 @@ services:
       - ./config:/etc/tinc
     environment:
       VPN_ADDRESS: ${VPN_ADDRESS:-10.77.0.1/24}
+      TINC_NETWORK: ${TINC_NETWORK:-mesh}
     command:
       - --no-detach
       - --debug=1
