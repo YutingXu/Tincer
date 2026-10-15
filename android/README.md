@@ -99,6 +99,7 @@ DNS/routes/app bypass.
 ANDROID_SERIAL=DEVICE_SERIAL ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest
 ```
 
+Replace `DEVICE_SERIAL` with the serial shown by `adb devices`.
 The emulator must expose its native VPN permission dialog; the test interacts
 with Android's normal grant/decline buttons. Long-running battery behavior and
 camera scanning still require device testing. Connection validation is recorded in [../TRIAL.md](../TRIAL.md).
