@@ -1,6 +1,6 @@
 # Tincer for Android
 
-Tincer is a native Jetpack Compose client for our private tinc mesh, based on tincapp 0.45.
+Tincer is a rootless Jetpack Compose client for tinc private networks, based on tincapp 0.45.
 The Android application ID is `dev.yuting.tinc`; it installs alongside the
 original app. Android 8.0 or later and a 64-bit ARM or x86 device are required.
 
@@ -31,7 +31,7 @@ Android 13 and later asks for notification permission after the first VPN
 connection. Declining it keeps the VPN usable; Settings includes a link to
 Android's notification controls.
 
-The Docker [one-command setup](../README.md#one-command-linux-setup-and-phone-pairing)
+The Docker [quick start](../README.md#quick-start)
 prints an invitation and QR code with the phone's VPN address and route.
 Joining selects an ephemeral listening port, since Android cannot bind tinc's
 privileged default port 655. tinc filters port settings out of invitations, so
@@ -39,8 +39,8 @@ the app sets its own port after the native join completes.
 
 ## Native engine
 
-The build downloads unmodified upstream tinc at the same revision as our desktop
-trial. It uses tinc's existing Android file-descriptor backend and built-in
+The build downloads unmodified upstream tinc at the same revision as the Docker
+image. It uses tinc's existing Android file-descriptor backend and built-in
 SPTPS/Ed25519 crypto. No native patches or separate crypto-library builds are
 required. This build supports **tinc 1.1 peers with compression disabled**; it
 excludes tinc 1.0/RSA compatibility. See [UPSTREAM.md](UPSTREAM.md) for source
@@ -48,10 +48,13 @@ revisions, attribution, and update instructions.
 
 ## Build
 
-Install JDK 17, Android SDK platforms `android-37.0`, build tools 37.0.0,
-NDK 28.2.13676358, and CMake 3.22.1. Put Meson and Ninja on `PATH`, for example:
+Prebuilt APKs are not published yet. To build locally, install Python 3,
+JDK 17, Android SDK platform `android-37.0`, build tools 37.0.0,
+NDK 28.2.13676358, and CMake 3.22.1. From the repository root, install Meson and
+Ninja in a local environment and add them to `PATH`:
 
 ```sh
+cd android
 python3 -m venv ../runtime/android-tools
 ../runtime/android-tools/bin/pip install meson ninja
 export PATH="$PWD/../runtime/android-tools/bin:$PATH"
@@ -70,9 +73,11 @@ It contains ARM64 and x86-64 binaries. Install it with:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The debug APK is signed using the local Android debug key. A production release
-needs our release signing key. No publishing or registry upload is part of this
-local build.
+For USB installation, enable USB debugging on the phone and approve the computer
+when prompted. After installing, follow the [pairing steps](../README.md#3-pair-and-connect).
+
+The debug APK uses your local Android debug key. Production distribution needs
+a release signing key; this build does not publish an APK.
 
 The native tools are staged on every CMake build, including when the upstream
 build is cached. To verify that both tools remain in the APK for both ABIs after
